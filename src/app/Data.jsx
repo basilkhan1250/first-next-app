@@ -13,12 +13,12 @@ import {
     doc
 } from "firebase/firestore";
 
-
 const Data = () => {
     const [input, setInput] = useState("");
-    const [todos, setTodos] = useState([])
-    const [editId, setEditId] = useState(null)
+    const [todos, setTodos] = useState([]);
+    const [editId, setEditId] = useState(null);
 
+    // ✅ Handle Add or Update
     const handleTodo = async (e) => {
         e.preventDefault();
 
@@ -29,91 +29,90 @@ const Data = () => {
 
         try {
             if (editId) {
-
-                await addDoc(collection(db, "todos", editId), {
+                // ✅ Update existing todo
+                await updateDoc(doc(db, "todos", editId), {
                     task: input,
                     timestamp: new Date(),
                 });
-                setEditId(null)
-            }
-            else {
+                setEditId(null);
+            } else {
+                // ➕ Add new todo
                 await addDoc(collection(db, "todos"), {
                     task: input,
                     timestamp: new Date()
-                })
+                });
             }
 
-            console.log("Todo added!");
             setInput("");
-            fetchTodos()
+            fetchTodos();
         } catch (error) {
-            console.error("Error adding todo:", error);
-            alert("Error: " + error.message);
+            console.error("Error adding/updating todo:", error);
         }
     };
 
+    // ✅ Get todos in order
     const fetchTodos = async () => {
         try {
-            const order = query(collection(db, "todos"), orderBy("timestamp", "desc"))
-            const snapShot = await getDocs(order)
-            const todoList = snapShot.docs.map((doc) => ({
+            const order = query(collection(db, "todos"), orderBy("timestamp", "desc"));
+            const snapshot = await getDocs(order);
+            const todoList = snapshot.docs.map((doc) => ({
                 id: doc.id,
                 ...doc.data(),
-            }))
-            setTodos(todoList)
+            }));
+            setTodos(todoList);
         } catch (error) {
-            console.error("Error fetching Todo", error)
+            console.error("Error fetching todos:", error);
         }
-    }
+    };
 
     useEffect(() => {
-        fetchTodos()
-    }, [])
+        fetchTodos();
+    }, []);
 
-
+    // ✅ Delete
     const handleDelete = async (id) => {
-        console.log("delete")
         try {
-            const del = deleteDoc(doc(db, "todos", id))
-            fetchTodos()
+            await deleteDoc(doc(db, "todos", id));
+            fetchTodos();
         } catch (error) {
-            console.error("Error removing document:", error)
+            console.error("Error deleting todo:", error);
         }
-    }
+    };
 
-    const handleUpdate = () => {
-        console.log("update")
-        setEditId(todos.id)
-        setTodos(todos.task)
-    }
-
-
+    // ✅ Prepare to update
+    const handleUpdate = (todo) => {
+        setEditId(todo.id);
+        setInput(todo.task);
+    };
 
     return (
-        <>
-            <div style={{ padding: 20 }}>
-                <h2>📝 Firebase Todo App</h2>
+        <div style={{ padding: 20 }}>
+            <h2>📝 Firebase Todo App</h2>
 
-                <form onSubmit={handleTodo}>
-                    <input
-                        type="text"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        placeholder="Enter your task"
-                    />
-                    <button type="submit">Submit</button>
-                </form>
+            <form onSubmit={handleTodo}>
+                <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="Enter your task"
+                />
+                <button type="submit">{editId ? "Update" : "Add"}</button>
+            </form>
 
-                <ul style={{ marginTop: 20 }}>
-                    {todos.map((todo) => (
-                        <li key={todo.id}>{todo.task}
-                            <button onClick={handleDelete}>delete</button>
-                            <button onClick={handleUpdate}>Update</button>
-                        </li>
-                    ))}
-                </ul>
-            </div>
-        </>
+            <ul style={{ marginTop: 20 }}>
+                {todos.map((todo) => (
+                    <li key={todo.id}>
+                        {todo.task}
+                        <button onClick={() => handleDelete(todo.id)} style={{ marginLeft: 10 }}>
+                            ❌ Delete
+                        </button>
+                        <button onClick={() => handleUpdate(todo)} style={{ marginLeft: 5 }}>
+                            ✏️ Edit
+                        </button>
+                    </li>
+                ))}
+            </ul>
+        </div>
     );
 };
 
