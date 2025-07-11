@@ -2,11 +2,22 @@
 
 import { useEffect, useState } from "react";
 import { db } from "../../firebaseConfig";
-import { addDoc, collection, getDocs, orderBy, query } from "firebase/firestore";
+import {
+    addDoc,
+    collection,
+    getDocs,
+    orderBy,
+    query,
+    deleteDoc,
+    updateDoc,
+    doc
+} from "firebase/firestore";
+
 
 const Data = () => {
     const [input, setInput] = useState("");
     const [todos, setTodos] = useState([])
+    const [editId, setEditId] = useState(null)
 
     const handleTodo = async (e) => {
         e.preventDefault();
@@ -17,10 +28,21 @@ const Data = () => {
         }
 
         try {
-            await addDoc(collection(db, "todos"), {
-                task: input,
-                timestamp: new Date(),
-            });
+            if (editId) {
+
+                await addDoc(collection(db, "todos", editId), {
+                    task: input,
+                    timestamp: new Date(),
+                });
+                setEditId(null)
+            }
+            else {
+                await addDoc(collection(db, "todos"), {
+                    task: input,
+                    timestamp: new Date()
+                })
+            }
+
             console.log("Todo added!");
             setInput("");
             fetchTodos()
@@ -49,12 +71,20 @@ const Data = () => {
     }, [])
 
 
-    const handleDelete = () => {
+    const handleDelete = async (id) => {
         console.log("delete")
+        try {
+            const del = deleteDoc(doc(db, "todos", id))
+            fetchTodos()
+        } catch (error) {
+            console.error("Error removing document:", error)
+        }
     }
 
     const handleUpdate = () => {
         console.log("update")
+        setEditId(todos.id)
+        setTodos(todos.task)
     }
 
 
