@@ -18,7 +18,6 @@ const Data = () => {
     const [todos, setTodos] = useState([]);
     const [editId, setEditId] = useState(null);
 
-    // ✅ Handle Add or Update
     const handleTodo = async (e) => {
         e.preventDefault();
 
@@ -29,14 +28,17 @@ const Data = () => {
 
         try {
             if (editId) {
-                // ✅ Update existing todo
                 await updateDoc(doc(db, "todos", editId), {
                     task: input,
                     timestamp: new Date(),
                 });
+                setTodos((prevData) =>
+                    prevData.map((data) =>
+                        data.id === editId ? { ...data, task: input, timestamp: new Date() } : data
+                    )
+                )
                 setEditId(null);
             } else {
-                // ➕ Add new todo
                 await addDoc(collection(db, "todos"), {
                     task: input,
                     timestamp: new Date()
@@ -45,12 +47,12 @@ const Data = () => {
 
             setInput("");
             fetchTodos();
+
         } catch (error) {
             console.error("Error adding/updating todo:", error);
         }
     };
 
-    // ✅ Get todos in order
     const fetchTodos = async () => {
         try {
             const order = query(collection(db, "todos"), orderBy("timestamp", "desc"));
@@ -69,7 +71,6 @@ const Data = () => {
         fetchTodos();
     }, []);
 
-    // ✅ Delete
     const handleDelete = async (id) => {
         try {
             await deleteDoc(doc(db, "todos", id));
@@ -79,7 +80,6 @@ const Data = () => {
         }
     };
 
-    // ✅ Prepare to update
     const handleUpdate = (todo) => {
         setEditId(todo.id);
         setInput(todo.task);
