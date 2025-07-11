@@ -39,10 +39,17 @@ const Data = () => {
                 )
                 setEditId(null);
             } else {
-                await addDoc(collection(db, "todos"), {
+                // ✅ Add to Firebase
+                const docRef = await addDoc(collection(db, "todos"), {
                     task: input,
-                    timestamp: new Date()
+                    timestamp: new Date(),
                 });
+
+                // ✅ Add to local list immediately
+                setTodos((prev) => [
+                    { id: docRef.id, task: input, timestamp: new Date() },
+                    ...prev,
+                ]);
             }
 
             setInput("");
