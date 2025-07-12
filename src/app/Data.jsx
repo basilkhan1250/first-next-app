@@ -39,13 +39,12 @@ const Data = () => {
                 )
                 setEditId(null);
             } else {
-                // ✅ Add to Firebase
+
                 const docRef = await addDoc(collection(db, "todos"), {
                     task: input,
                     timestamp: new Date(),
                 });
 
-                // ✅ Add to local list immediately
                 setTodos((prev) => [
                     { id: docRef.id, task: input, timestamp: new Date() },
                     ...prev,
@@ -69,6 +68,7 @@ const Data = () => {
                 ...doc.data(),
             }));
             setTodos(todoList);
+            console.log(todoList)
         } catch (error) {
             console.error("Error fetching todos:", error);
         }
