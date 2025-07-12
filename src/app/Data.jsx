@@ -30,6 +30,7 @@ const Data = () => {
         const unSubscribe = onAuthStateChanged(auth, (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
+                console.log("user data",currentUser)
                 fetchTodos(currentUser.uid);
             } else {
                 setUser(null);
@@ -105,7 +106,9 @@ const Data = () => {
                 where("userId", "==", uid),
                 orderBy("timestamp", "desc")
             );
+            console.log(userTodoQuery)
             const snapshot = await getDocs(userTodoQuery);
+            console.log(snapshot)
             const todoList = snapshot.docs.map((doc) => ({
                 id: doc.id,
                 ...doc.data()
