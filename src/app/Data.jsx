@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from "react";
-import { db } from "../../firebaseConfig";
+import { db, auth } from "../../firebaseConfig";
 import {
     addDoc,
     collection,
@@ -10,19 +10,58 @@ import {
     query,
     deleteDoc,
     updateDoc,
-    doc
+    doc,
+    where
 } from "firebase/firestore";
+import {
+    GoogleAuthProvider,
+    signInWithPopup,
+    signOut,
+    onAuthStateChanged
+} from "firebase/auth";
 
 const Data = () => {
     const [input, setInput] = useState("");
     const [todos, setTodos] = useState([]);
     const [editId, setEditId] = useState(null);
+    const [user, setUser] = useState(null);
+
+    useEffect(() => {
+        const unSubscribe = onAuthStateChanged(auth, (currentUser) => {
+            if (currentUser) {
+                setUser(currentUser);
+                fetchTodos(currentUser.uid);
+            } else {
+                setUser(null);
+                setTodos([]);
+            }
+        });
+
+        return () => unSubscribe();
+    }, []);
+
+    const handleLogin = async () => {
+        const provider = new GoogleAuthProvider();
+        try {
+            await signInWithPopup(auth, provider);
+        } catch (error) {
+            console.error("Login failed:", error);
+        }
+    };
+
+    const handleLogout = async () => {
+        try {
+            await signOut(auth);
+        } catch (error) {
+            console.error("Logout failed:", error);
+        }
+    };
 
     const handleTodo = async (e) => {
         e.preventDefault();
 
         if (!input.trim()) {
-            alert("Please enter something");
+            alert("Please enter something or make sure you are logged in");
             return;
         }
 
@@ -30,58 +69,57 @@ const Data = () => {
             if (editId) {
                 await updateDoc(doc(db, "todos", editId), {
                     task: input,
-                    timestamp: new Date(),
+                    timestamp: new Date()
                 });
                 setTodos((prevData) =>
                     prevData.map((data) =>
-                        data.id === editId ? { ...data, task: input, timestamp: new Date() } : data
+                        data.id === editId
+                            ? { ...data, task: input, timestamp: new Date() }
+                            : data
                     )
-                )
+                );
                 setEditId(null);
             } else {
-
                 const docRef = await addDoc(collection(db, "todos"), {
                     task: input,
                     timestamp: new Date(),
+                    userId: user.uid
                 });
 
                 setTodos((prev) => [
-                    { id: docRef.id, task: input, timestamp: new Date() },
-                    ...prev,
+                    { id: docRef.id, task: input, timestamp: new Date(), userId: user.uid },
+                    ...prev
                 ]);
             }
 
             setInput("");
-            fetchTodos();
-
         } catch (error) {
             console.error("Error adding/updating todo:", error);
         }
     };
 
-    const fetchTodos = async () => {
+    const fetchTodos = async (uid) => {
         try {
-            const order = query(collection(db, "todos"), orderBy("timestamp", "desc"));
-            const snapshot = await getDocs(order);
+            const userTodoQuery = query(
+                collection(db, "todos"),
+                where("userId", "==", uid),
+                orderBy("timestamp", "desc")
+            );
+            const snapshot = await getDocs(userTodoQuery);
             const todoList = snapshot.docs.map((doc) => ({
                 id: doc.id,
-                ...doc.data(),
+                ...doc.data()
             }));
             setTodos(todoList);
-            console.log(todoList)
         } catch (error) {
             console.error("Error fetching todos:", error);
         }
     };
 
-    useEffect(() => {
-        fetchTodos();
-    }, []);
-
     const handleDelete = async (id) => {
         try {
             await deleteDoc(doc(db, "todos", id));
-            fetchTodos();
+            setTodos((prev) => prev.filter((todo) => todo.id !== id));
         } catch (error) {
             console.error("Error deleting todo:", error);
         }
@@ -94,31 +132,42 @@ const Data = () => {
 
     return (
         <div style={{ padding: 20 }}>
-            <h2>📝 Firebase Todo App</h2>
+            <h2>📝 Firebase Todo App (Per User)</h2>
 
-            <form onSubmit={handleTodo}>
-                <input
-                    type="text"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder="Enter your task"
-                />
-                <button type="submit">{editId ? "Update" : "Add"}</button>
-            </form>
+            {!user ? (
+                <>
+                    <p>Please login to view and manage your todos.</p>
+                    <button onClick={handleLogin}>Sign in with Google</button>
+                </>
+            ) : (
+                <>
+                    <p>Yokoso, {user.displayName} <button onClick={handleLogout}>Logout</button></p>
 
-            <ul style={{ marginTop: 20 }}>
-                {todos.map((todo) => (
-                    <li key={todo.id}>
-                        {todo.task}
-                        <button onClick={() => handleDelete(todo.id)} style={{ marginLeft: 10 }}>
-                            ❌ Delete
-                        </button>
-                        <button onClick={() => handleUpdate(todo)} style={{ marginLeft: 5 }}>
-                            ✏️ Edit
-                        </button>
-                    </li>
-                ))}
-            </ul>
+                    <form onSubmit={handleTodo}>
+                        <input
+                            type="text"
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            placeholder="Enter your task"
+                        />
+                        <button type="submit">{editId ? "Update" : "Add"}</button>
+                    </form>
+
+                    <ul style={{ marginTop: 20 }}>
+                        {todos.map((todo) => (
+                            <li key={todo.id}>
+                                {todo.task}
+                                <button onClick={() => handleDelete(todo.id)} style={{ marginLeft: 10 }}>
+                                    ❌ Delete
+                                </button>
+                                <button onClick={() => handleUpdate(todo)} style={{ marginLeft: 5 }}>
+                                    ✏️ Edit
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                </>
+            )}
         </div>
     );
 };
