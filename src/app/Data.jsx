@@ -1,5 +1,6 @@
 'use client';
 
+import styles from "./page.module.css";
 import { useEffect, useState } from "react";
 import { db, auth } from "../../firebaseConfig";
 import {
@@ -30,7 +31,7 @@ const Data = () => {
         const unSubscribe = onAuthStateChanged(auth, (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
-                console.log("user data",currentUser)
+                console.log("user data", currentUser)
                 fetchTodos(currentUser.uid);
             } else {
                 setUser(null);
@@ -134,7 +135,7 @@ const Data = () => {
     };
 
     return (
-        <div style={{ padding: 20 }}>
+        <div style={{ padding: 20 }} className="main">
             <h2>📝 Firebase Todo App (Per User)</h2>
 
             {!user ? (
